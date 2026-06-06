@@ -1,0 +1,13 @@
+
+i need an mt5 expert advisor to trigger buy at 0.01 lot size whenever on the 15m timeframe we have macd histogram below zero, that forms a bar shorter bar than previous, after a streak of at least 6 consecutive falling bars below the zero. The second condition is that the 20sma must have been trending down by at least 3 atr, or price must have been dropping by at least 3 atr over the last 6 bars; stop loss, 1.5 atr; take profit 3 atr. 
+I need an mt5 expert advisor that should work as follows: 
+all trades by default should buy at 0.01 lot size, 1.5 stop loss, 3 atr take profit; Each strategy shall have its own magic number; 
+The expert advisor shall also follow the following principles:
+No non-Latin characters: Remove all emojis, special symbols, or non-ASCII from Print(), comments, and strings.
+Invalid Stops: Always validate SL/TP using SYMBOL_TRADE_STOPS_LEVEL + buffer (minimum 3-5 points extra). Adjust dynamically and never place orders if distance is insufficient.
+Invalid Volume / Volume Limit Reached: Normalize lots using SYMBOL_VOLUME_MIN, SYMBOL_VOLUME_MAX, SYMBOL_VOLUME_STEP, and SYMBOL_VOLUME_LIMIT. Respect netting mode limits.
+Stop-Outs / Excessive Drawdown: Use conservative risk (max 0.5-1% per trade, strong margin checks, reduce lots on XAUUSD/Gold). Avoid large fixed lots.
+General Robustness: Include pre-trade validation (OrderCalcMargin, spread check, free margin safety), proper filling modes, and new-bar detection.
+strategy 1 :  when the macd histogram forms a bar that is shorter than the previous, while it is below zero line, if the 8ema has been going down by at least 2 atr without turning up, or the price had gone down by the same distance, take a buy order with  the above specifications;
+Strategy 2. when the macd histogram forms a bar that is taller than the previous, while it is above the  zero line, if the 8ema has been going up by at least 2 atr without turning down, or the price had gone up by the same distance, take a sell order with  the above specifications
+Generate full, clean, production-ready code that passes MQL5 Market and Strategy Tester validation.
