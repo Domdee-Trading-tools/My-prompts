@@ -1,0 +1,17 @@
+Strategy: If there is a perfect 8ema>20sma>50sma>100sma alignment, a Valid20sma is the 20sma that has done more than 50 points since perfect alignment
+without hitting any one of price or another moving average.
+  Sobsine20smaRise is the 20sma condition whereby it trended down for a while, and at the present condition it is curving back upwards to the point that a horizontal line can intersect it at two distinct points within less than 13 periods.
+  so if this alignment is observed at the selected timeframe (default 15m) then
+if Valid20sma occurs when the 20sma hits the price for the first time since the alignment, then wait for sobsine20smaRise
+and take a buy order. the buy order should have 0.01 lot, 1.5 stop loss and 3 atr take profit. if the stop loss is hit, 
+  the program shall wait for the next sobsine and take 0.02 lot size; if it fails to catch the 3 atr for the third time, 
+  the program shall increment lot size to 0.03 etc. please generate the expert advisor for mt5
+
+additional notes: if the 20sma trends down for 1 atr without meeting a moving average or price, the moment it does, start waiting for 
+sobsine20smaRise
+additional notes: if the 50sma trends down for 1 atr without meeting a moving average or price, the moment it does, start waiting for 
+sobsine50smaRise; 
+additional notes: if the 100sma trends down for 1 atr without meeting a moving average or price, the moment it does, start waiting for 
+sobsine100smaRise. At each of these, take a buy order 
+While there is a downmove, if a sobsine happens on another moving average ie when we are at a bearish allignment if a sobsine8emafall happens on the 20sma then 
+take a sell.
