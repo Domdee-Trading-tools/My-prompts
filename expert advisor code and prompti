@@ -1,0 +1,584 @@
+//+------------------------------------------------------------------+
+//|                                      DailyRangeBreakout.mq5      |
+//|                                      Copyright 2024              |
+//|                                      Daily Range & Swing Levels  |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2024"
+#property link      ""
+#property version   "1.00"
+#property indicator_chart_window
+#property indicator_plots 0
+
+//--- Input parameters
+input int      SwingLookback = 50;           // Bars to look for swing levels
+input int      SwingStrength = 3;            // Swing strength (bars each side)
+input double   BreakoutBuffer = 10;          // Buffer in points for breakout zone
+input bool     ShowLabels = true;            // Show level labels
+input bool     ShowBreakoutArrows = true;    // Show breakout arrows
+input int      DaysToShow = 10;              // Number of days to display
+
+//--- Structure to hold daily data
+struct DayData
+{
+   datetime start_time;
+   datetime end_time;
+   double   range_high;        // Previous day's high
+   double   range_low;         // Previous day's low
+   double   swing_high;        // Next level above RangeHigh
+   double   swing_low;         // Next level below RangeLow
+   bool     breakout_detected;
+   int      breakout_direction; // 1 = up, -1 = down
+   datetime breakout_time;
+   int      color_index;
+};
+
+DayData daily_data[];
+int     total_days = 0;
+
+//--- Color palette for rectangles (very transparent)
+color rectangle_colors[] = 
+{
+   C'173,216,230',  // Light Blue
+   C'144,238,144',  // Light Green
+   C'255,182,193',  // Light Pink
+   C'255,218,185',  // Peach
+   C'221,160,221',  // Plum
+   C'176,224,230',  // Powder Blue
+   C'255,228,196',  // Bisque
+   C'176,196,222',  // Light Steel Blue
+   C'255,240,245',  // Lavender Blush
+   C'240,255,240'   // Honeydew
+};
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+   DeleteAllObjects();
+   return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator deinitialization function                       |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+   DeleteAllObjects();
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+{
+   ArraySetAsSeries(time, true);
+   ArraySetAsSeries(high, true);
+   ArraySetAsSeries(low, true);
+   ArraySetAsSeries(close, true);
+   ArraySetAsSeries(open, true);
+   
+   // Build daily data structure
+   IdentifyDailyRanges(time, high, low, rates_total);
+   
+   // Calculate swing levels
+   CalculateSwingLevels(time, high, low, rates_total);
+   
+   // Draw all rectangles and levels
+   DrawAllElements();
+   
+   // Detect breakouts
+   DetectRangeBreakouts(time, high, low, close, rates_total);
+   
+   return(rates_total);
+}
+
+//+------------------------------------------------------------------+
+//| Identify daily ranges                                            |
+//+------------------------------------------------------------------+
+void IdentifyDailyRanges(const datetime &time[], const double &high[], 
+                         const double &low[], int total)
+{
+   ArrayResize(daily_data, 0);
+   total_days = 0;
+   
+   MqlDateTime current_dt, bar_dt;
+   TimeToStruct(time[0], current_dt);
+   
+   int current_day = current_dt.day_of_year;
+   int day_start_bar = 0;
+   int days_found = 0;
+   
+   // Scan bars from newest to oldest
+   for(int i = 0; i < total && days_found < DaysToShow + 1; i++)
+   {
+      TimeToStruct(time[i], bar_dt);
+      
+      // Detect day change
+      if(bar_dt.day_of_year != current_day || i == total - 1)
+      {
+         if(day_start_bar > 0 || i == total - 1)
+         {
+            ProcessDailyRange(time, high, low, day_start_bar, i - 1, days_found);
+            days_found++;
+         }
+         
+         current_day = bar_dt.day_of_year;
+         day_start_bar = i;
+      }
+   }
+}
+
+//+------------------------------------------------------------------+
+//| Process a single day's range                                     |
+//+------------------------------------------------------------------+
+void ProcessDailyRange(const datetime &time[], const double &high[], 
+                       const double &low[], int newest_bar, int oldest_bar,
+                       int day_index)
+{
+   if(oldest_bar < newest_bar) return;
+   
+   ArrayResize(daily_data, total_days + 1);
+   
+   // Find high and low for this day
+   double day_high = high[oldest_bar];
+   double day_low = low[oldest_bar];
+   
+   for(int i = oldest_bar; i >= newest_bar; i--)
+   {
+      if(high[i] > day_high) day_high = high[i];
+      if(low[i] < day_low) day_low = low[i];
+   }
+   
+   // Store day data
+   daily_data[total_days].start_time = time[oldest_bar];
+   daily_data[total_days].end_time = time[newest_bar];
+   daily_data[total_days].range_high = day_high;
+   daily_data[total_days].range_low = day_low;
+   daily_data[total_days].color_index = total_days % ArraySize(rectangle_colors);
+   daily_data[total_days].breakout_detected = false;
+   daily_data[total_days].swing_high = 0;
+   daily_data[total_days].swing_low = 0;
+   
+   total_days++;
+}
+
+//+------------------------------------------------------------------+
+//| Calculate swing levels for each day                              |
+//+------------------------------------------------------------------+
+void CalculateSwingLevels(const datetime &time[], const double &high[], 
+                          const double &low[], int total)
+{
+   // For each day (except the oldest), find swing levels from previous data
+   for(int d = 0; d < total_days - 1; d++)
+   {
+      // Get the previous day's range (which is the next day in array)
+      double prev_high = daily_data[d + 1].range_high;
+      double prev_low = daily_data[d + 1].range_low;
+      
+      // Find the bar index for the start of current day
+      int current_day_bar = iBarShift(_Symbol, PERIOD_CURRENT, daily_data[d].start_time);
+      
+      // Find swing high above previous day's high
+      daily_data[d].swing_high = FindSwingHighLevel(high, low, current_day_bar, prev_high, total);
+      
+      // Find swing low below previous day's low
+      daily_data[d].swing_low = FindSwingLowLevel(high, low, current_day_bar, prev_low, total);
+   }
+}
+
+//+------------------------------------------------------------------+
+//| Find swing high above reference level                            |
+//+------------------------------------------------------------------+
+double FindSwingHighLevel(const double &high[], const double &low[], 
+                          int from_bar, double reference_level, int total)
+{
+   double swing_high = 0;
+   int search_end = MathMin(from_bar + SwingLookback, total - SwingStrength - 1);
+   
+   // Look for swing highs in historical data
+   for(int i = from_bar + SwingStrength; i < search_end; i++)
+   {
+      bool is_swing = true;
+      
+      // Check if current bar is higher than surrounding bars
+      for(int j = 1; j <= SwingStrength; j++)
+      {
+         if(high[i] <= high[i - j] || high[i] <= high[i + j])
+         {
+            is_swing = false;
+            break;
+         }
+      }
+      
+      // If valid swing high and above reference level
+      if(is_swing && high[i] > reference_level)
+      {
+         // Take the first (nearest) swing high above reference
+         if(swing_high == 0 || high[i] < swing_high)
+         {
+            swing_high = high[i];
+         }
+      }
+   }
+   
+   // If no swing found, estimate using ATR
+   if(swing_high == 0)
+   {
+      double atr = CalculateSimpleATR(high, low, from_bar, 14);
+      swing_high = reference_level + atr;
+   }
+   
+   return swing_high;
+}
+
+//+------------------------------------------------------------------+
+//| Find swing low below reference level                             |
+//+------------------------------------------------------------------+
+double FindSwingLowLevel(const double &high[], const double &low[], 
+                         int from_bar, double reference_level, int total)
+{
+   double swing_low = 0;
+   int search_end = MathMin(from_bar + SwingLookback, total - SwingStrength - 1);
+   
+   // Look for swing lows in historical data
+   for(int i = from_bar + SwingStrength; i < search_end; i++)
+   {
+      bool is_swing = true;
+      
+      // Check if current bar is lower than surrounding bars
+      for(int j = 1; j <= SwingStrength; j++)
+      {
+         if(low[i] >= low[i - j] || low[i] >= low[i + j])
+         {
+            is_swing = false;
+            break;
+         }
+      }
+      
+      // If valid swing low and below reference level
+      if(is_swing && low[i] < reference_level)
+      {
+         // Take the first (nearest) swing low below reference
+         if(swing_low == 0 || low[i] > swing_low)
+         {
+            swing_low = low[i];
+         }
+      }
+   }
+   
+   // If no swing found, estimate using ATR
+   if(swing_low == 0)
+   {
+      double atr = CalculateSimpleATR(high, low, from_bar, 14);
+      swing_low = reference_level - atr;
+   }
+   
+   return swing_low;
+}
+
+//+------------------------------------------------------------------+
+//| Calculate simple ATR                                             |
+//+------------------------------------------------------------------+
+double CalculateSimpleATR(const double &high[], const double &low[], 
+                          int start_bar, int period)
+{
+   double sum = 0;
+   int count = 0;
+   
+   for(int i = start_bar; i < start_bar + period; i++)
+   {
+      sum += high[i] - low[i];
+      count++;
+   }
+   
+   return (count > 0) ? sum / count : (high[start_bar] - low[start_bar]);
+}
+
+//+------------------------------------------------------------------+
+//| Draw all visual elements                                         |
+//+------------------------------------------------------------------+
+void DrawAllElements()
+{
+   for(int i = 0; i < total_days - 1; i++)
+   {
+      color rect_color = rectangle_colors[daily_data[i].color_index];
+      
+      // Rectangle 1: Previous day's range (from prev day start to current day start)
+      string prev_rect_name = "PrevDayRect_" + IntegerToString(i);
+      CreateRectangle(prev_rect_name,
+                     daily_data[i + 1].start_time,
+                     daily_data[i].start_time,
+                     daily_data[i + 1].range_high,
+                     daily_data[i + 1].range_low,
+                     rect_color);
+      
+      // Rectangle 2: Current day range (from current day start to end)
+      string curr_rect_name = "CurrDayRect_" + IntegerToString(i);
+      CreateRectangle(curr_rect_name,
+                     daily_data[i].start_time,
+                     daily_data[i].end_time,
+                     daily_data[i + 1].range_high,  // Using previous day's high/low
+                     daily_data[i + 1].range_low,
+                     rect_color);
+      
+      if(ShowLabels && daily_data[i].swing_high > 0)
+      {
+         // Draw swing high line
+         CreateTrendLine("SwingHigh_" + IntegerToString(i),
+                        daily_data[i].start_time,
+                        daily_data[i].end_time,
+                        daily_data[i].swing_high,
+                        clrRed,
+                        STYLE_DASH,
+                        2);
+         
+         // Draw swing low line
+         CreateTrendLine("SwingLow_" + IntegerToString(i),
+                        daily_data[i].start_time,
+                        daily_data[i].end_time,
+                        daily_data[i].swing_low,
+                        clrBlue,
+                        STYLE_DASH,
+                        2);
+         
+         // Draw range high line
+         CreateTrendLine("RangeHigh_" + IntegerToString(i),
+                        daily_data[i].start_time,
+                        daily_data[i].end_time,
+                        daily_data[i + 1].range_high,
+                        clrOrange,
+                        STYLE_SOLID,
+                        1);
+         
+         // Draw range low line
+         CreateTrendLine("RangeLow_" + IntegerToString(i),
+                        daily_data[i].start_time,
+                        daily_data[i].end_time,
+                        daily_data[i + 1].range_low,
+                        clrGreen,
+                        STYLE_SOLID,
+                        1);
+         
+         // Create labels
+         CreateTextLabel("LblSH_" + IntegerToString(i),
+                        daily_data[i].start_time,
+                        daily_data[i].swing_high,
+                        "SwH: " + DoubleToString(daily_data[i].swing_high, _Digits),
+                        clrRed);
+         
+         CreateTextLabel("LblSL_" + IntegerToString(i),
+                        daily_data[i].start_time,
+                        daily_data[i].swing_low,
+                        "SwL: " + DoubleToString(daily_data[i].swing_low, _Digits),
+                        clrBlue);
+      }
+   }
+}
+
+//+------------------------------------------------------------------+
+//| Detect range breakouts                                           |
+//+------------------------------------------------------------------+
+void DetectRangeBreakouts(const datetime &time[], const double &high[], 
+                          const double &low[], const double &close[], int total)
+{
+   if(!ShowBreakoutArrows) return;
+   
+   for(int d = 0; d < total_days - 1; d++)
+   {
+      if(daily_data[d].breakout_detected || daily_data[d].swing_high == 0) 
+         continue;
+      
+      double buffer = BreakoutBuffer * _Point;
+      double prev_high = daily_data[d + 1].range_high;
+      double prev_low = daily_data[d + 1].range_low;
+      
+      // Check each bar in the current day
+      for(int i = 0; i < total; i++)
+      {
+         if(time[i] < daily_data[d].start_time || time[i] > daily_data[d].end_time)
+            continue;
+         
+         // Check for breakout above - candle leaves range and enters swing high zone
+         if(low[i] > prev_high &&  // Left the range
+            high[i] >= daily_data[d].swing_high - buffer)  // Reached swing high neighborhood
+         {
+            daily_data[d].breakout_detected = true;
+            daily_data[d].breakout_direction = 1;
+            daily_data[d].breakout_time = time[i];
+            
+            CreateArrow("BreakUp_" + IntegerToString(d),
+                       time[i],
+                       low[i],
+                       233,
+                       clrLime,
+                       3);
+            break;
+         }
+         
+         // Check for breakout below - candle leaves range and enters swing low zone
+         if(high[i] < prev_low &&  // Left the range
+            low[i] <= daily_data[d].swing_low + buffer)  // Reached swing low neighborhood
+         {
+            daily_data[d].breakout_detected = true;
+            daily_data[d].breakout_direction = -1;
+            daily_data[d].breakout_time = time[i];
+            
+            CreateArrow("BreakDown_" + IntegerToString(d),
+                       time[i],
+                       high[i],
+                       234,
+                       clrRed,
+                       3);
+            break;
+         }
+      }
+   }
+}
+
+//+------------------------------------------------------------------+
+//| Create rectangle object                                          |
+//+------------------------------------------------------------------+
+void CreateRectangle(string name, datetime time1, datetime time2,
+                     double price1, double price2, color clr)
+{
+   if(ObjectFind(0, name) < 0)
+      ObjectCreate(0, name, OBJ_RECTANGLE, 0, time1, price1, time2, price2);
+   else
+   {
+      ObjectSetInteger(0, name, OBJPROP_TIME, 0, time1);
+      ObjectSetInteger(0, name, OBJPROP_TIME, 1, time2);
+      ObjectSetDouble(0, name, OBJPROP_PRICE, 0, price1);
+      ObjectSetDouble(0, name, OBJPROP_PRICE, 1, price2);
+   }
+   
+   ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
+   ObjectSetInteger(0, name, OBJPROP_STYLE, STYLE_SOLID);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH, 1);
+   ObjectSetInteger(0, name, OBJPROP_FILL, true);
+   ObjectSetInteger(0, name, OBJPROP_BACK, true);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(0, name, OBJPROP_SELECTED, false);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+}
+
+//+------------------------------------------------------------------+
+//| Create trend line                                                |
+//+------------------------------------------------------------------+
+void CreateTrendLine(string name, datetime time1, datetime time2,
+                     double price, color clr, ENUM_LINE_STYLE style, int width)
+{
+   if(ObjectFind(0, name) < 0)
+      ObjectCreate(0, name, OBJ_TREND, 0, time1, price, time2, price);
+   else
+   {
+      ObjectSetInteger(0, name, OBJPROP_TIME, 0, time1);
+      ObjectSetInteger(0, name, OBJPROP_TIME, 1, time2);
+      ObjectSetDouble(0, name, OBJPROP_PRICE, 0, price);
+      ObjectSetDouble(0, name, OBJPROP_PRICE, 1, price);
+   }
+   
+   ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
+   ObjectSetInteger(0, name, OBJPROP_STYLE, style);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH, width);
+   ObjectSetInteger(0, name, OBJPROP_RAY_RIGHT, false);
+   ObjectSetInteger(0, name, OBJPROP_BACK, false);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+}
+
+//+------------------------------------------------------------------+
+//| Create text label                                                |
+//+------------------------------------------------------------------+
+void CreateTextLabel(string name, datetime time, double price, 
+                     string text, color clr)
+{
+   if(ObjectFind(0, name) < 0)
+      ObjectCreate(0, name, OBJ_TEXT, 0, time, price);
+   else
+   {
+      ObjectSetInteger(0, name, OBJPROP_TIME, 0, time);
+      ObjectSetDouble(0, name, OBJPROP_PRICE, 0, price);
+   }
+   
+   ObjectSetString(0, name, OBJPROP_TEXT, text);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
+   ObjectSetString(0, name, OBJPROP_FONT, "Arial");
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, 8);
+   ObjectSetInteger(0, name, OBJPROP_BACK, false);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+}
+
+//+------------------------------------------------------------------+
+//| Create arrow object                                              |
+//+------------------------------------------------------------------+
+void CreateArrow(string name, datetime time, double price, 
+                 int arrow_code, color clr, int width)
+{
+   if(ObjectFind(0, name) < 0)
+      ObjectCreate(0, name, OBJ_ARROW, 0, time, price);
+   else
+   {
+      ObjectSetInteger(0, name, OBJPROP_TIME, 0, time);
+      ObjectSetDouble(0, name, OBJPROP_PRICE, 0, price);
+   }
+   
+   ObjectSetInteger(0, name, OBJPROP_ARROWCODE, arrow_code);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH, width);
+   ObjectSetInteger(0, name, OBJPROP_BACK, false);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+}
+
+//+------------------------------------------------------------------+
+//| Delete all objects created by indicator                          |
+//+------------------------------------------------------------------+
+void DeleteAllObjects()
+{
+   int obj_total = ObjectsTotal(0);
+   
+   for(int i = obj_total - 1; i >= 0; i--)
+   {
+      string obj_name = ObjectName(0, i);
+      
+      if(StringFind(obj_name, "PrevDayRect_") >= 0 ||
+         StringFind(obj_name, "CurrDayRect_") >= 0 ||
+         StringFind(obj_name, "SwingHigh_") >= 0 ||
+         StringFind(obj_name, "SwingLow_") >= 0 ||
+         StringFind(obj_name, "RangeHigh_") >= 0 ||
+         StringFind(obj_name, "RangeLow_") >= 0 ||
+         StringFind(obj_name, "LblSH_") >= 0 ||
+         StringFind(obj_name, "LblSL_") >= 0 ||
+         StringFind(obj_name, "BreakUp_") >= 0 ||
+         StringFind(obj_name, "BreakDown_") >= 0)
+      {
+         ObjectDelete(0, obj_name);
+      }
+   }
+   
+   ChartRedraw();
+}
+//+------------------------------------------------------------------+
+Please I need to modify the above code into a full - fledge expert advisor, so please i need you to change all the parameters  from  indicator into expert advisor. The defined levels shall be redefined, this time in headless mode. When this was done, please define the buy and the sell conditions as follows: 
+Please note that the monitor timeframe is the 15m timeframe which i wish to set as the default timeframe; the precision timeframe is the 1m timefram.
+Strategy A: buy below Rangelow
+If price action crosses below RangeLow at the 15 m timeframe, start monitoring the 1m timeframe price. If at the 1m timeframe the 8ema is below the 20sma at the moment of crossover, wait until it crosses above it. When it does, take a buy at 0.01 lot size, 1.5 atr stop loss, 3.5 atr take profit.
+Strategy B: buy below SwingLow
+If price action crosses below SwingLow at the 15m timeframe, start monitoring the 1m timeframe price. If at the 1m timeframe the 8ema is below the 20sma at the moment of crossover, wait until it crosses above it. When it does, take a buy at 0.01 lot size, 1.5 atr stop loss, 10 atr take profit.
+Strategy C: Buy signal below SwingLow
+If we experience a buy signal below swingLow, the program shall immediately trigger a buy without refering to the 1m timeframe: 1.5 atr stop loss, 10 atr take profit, 0.01 lot size
+
+Strategy D: sell below RangeHigh
+If price action make a sell candle signa less than 1 atr below RangeHigh, or anywhere above RangeHigh, up to 1 atr above SwingHigh then take sell at 0.01; 
+If the sell signal opened above SwingHigh or less than 1 atr below it, then stop loss is 1.5 atr,  then implement trailing stop loss and take profits; handle this like a professional trader and developper.
