@@ -1,0 +1,42 @@
+The expert advisor i want to create shall use the following parameters:
+ach strategy shall work with its own magic number
+Macd histogram shall  be named MacdFall if, anywhere, after a succession of 3 rising bars, it suddenly forms one falling bar. The one falling bar shall thus be referred to as MacdFall.
+MacdFall+ is the MacdFall happening above the zero line; MacdFall- is the MacdFall happening below the zero line. 1MacdFall refers to the first MacdFall since the histogram crossed the zero line: 1MacdFall- if below zero or 1MacdFall+ if happening above zero.
+Please infer the rest from the following definition: 2MacdFall- is the second MacdFall since the histogram crossed below the zero line,2MacdFall+ the second  MacdFall happening above zero line   etc.
+
+Macd histogram shall also   be named MacdRise if, anywhere, after a succession of 3 falling bars, it suddenly forms one Rising bar. The one Rising bar shall thus be referred to as MacdRise.
+MacdRise+ is the MacdRise happening above the zero line; MacdRise- is the MacdRise happening below the zero line. 1MacdRise refers to the first MacdRise occurring since the histogram crossed the zero line; for example 1MacdRise+ is the first MacdRise since the histogram crossed above the zero line; 1MacdRise- if occurring for the first time since it crossed below the zero line.
+
+PriceRise is the the lowest low of the latest 3 candles that include the MacdRise
+PriceRise shall be written with the same features as MacdRise: 1PriceRise is the one that goes with 1MacdRise, 2PriceRise the one that matches with 2MacdRise, etc 
+The same applies to PriceFall: 1PriceFall goes with 1MacdFall,  nPriceFall with nMacdFall where n is the count variable, etc. please infer the logic here and extend it 
+
+lets say 1PriceRise is the   PriceRise moving along with 1MacdRise; 1PriceFall the PriceFall (the highest  point in price structure at the level of MacdFall) matching with 1MacdFall; 2PriceFall the PriceFall matching with 2MacdFall;  etc please infer the rule:  use e as count variable that resets at the zero line crossover, and count the number of occurrences of a pattern WITHOUT CROSSING THE ZERO LINE i repeat you should structure all this very well by adding the specifications i could not think of, but which you deem the logical understanding.
+Strategy 1
+BLOCK A 
+check for  Macd bullish divergences in the 30m+ timeframe; monitor all the timeframes: 30m, 1H, 4H, 1D or even 1W ; track bullish divergence; before it happens: 
+if you have Macd histogram  (n+1)MacdRise- and  (n+1)PriceRise forming at the 30m timeframe or 1H timeframe then
+If  (n)MacdRise-  is lower than (n+1)MacdRise- and  (n+1)PriceRise  is higher than  (n)PriceRise 
+THIS MEANS THERE IS BULLISH DIVERGENCE (CASE WHERE IN A FALLING STRUCTURE,  (n+1)MacdRise- is higher than nMacdRise- while (n+1)PriceRise is lower than nPriceRise 
+then drop Block A completely and  switch to Block B below:
+BLOCK B
+switch to the lower timeframe M1 or M5, this time dropping and forgetting everthing about block A 
+Move to the 1m or 5m timeframe and start waiting for the first MacdRise to form in either of the timeframes. when it does, take a buy order. The trade shall run until we get the 1MacdFall+  for the first time at the same timeframe where the MacdRise was detected.
+Strategy 2
+BLOCK C
+check for  Macd bearish divergences in the 30m or 1H timeframe ; track bearish divergence as follows:  if  in a rising price structure, (n+1)PriceFall is higher than the nPriceFall while their respective matches (n+1)MacdFall+ is lower than nMacdFall then this indicates a bearish divergence; the program shall immediately drop all analyses and switch to Block D
+ 
+BLOCK D
+switch to the lower  (1m or 5m)  timeframe, this time dropping and  ignoring all the Block C conditions and instructions. 
+If in the 1m or 5m timeframe the histogram is above the zero line, trigger a sell order.
+The order shall run until we get 1MacdRise- at the very same timeframe where the signal was observed for entry.
+
+please generate this expert advisor making sure to add the other parameters i may have overlooked. Remember, among other things, to provide a logic whereby after a Block cycle is ended in Block D, the program should come back to the starting position. I also  need mql5 validation so abide by the following rules:
+MQL5 Validation & Robustness Requirements
+No non-Latin characters: Remove all emojis, special symbols, or non-ASCII characters from Print(), comments, and strings.
+Invalid Stops: Always validate SL/TP using SYMBOL_TRADE_STOPS_LEVEL + buffer (minimum 3–5 points extra). Adjust dynamically and never place orders if the distance is insufficient.
+Invalid Volume / Volume Limit Reached: Normalize lots using SYMBOL_VOLUME_MIN, SYMBOL_VOLUME_MAX, SYMBOL_VOLUME_STEP, and SYMBOL_VOLUME_LIMIT. Respect netting mode limits.
+Stop-Outs / Excessive Drawdown: Use conservative risk (max 0.5–1% per trade), strong margin checks, and reduce lots on XAUUSD/Gold. Avoid large fixed lots.
+General Robustness: Include pre-trade validation (OrderCalcMargin, spread check, free margin safety), proper filling modes, and new-bar detection.
+Magic Numbers: Implement a new magic number for each strategy.
+Output: Generate full, clean, production-ready code that passes MQL5 Market and Strategy Tester validation.
