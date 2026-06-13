@@ -1,0 +1,25 @@
+
+The expert advisor i want to create shall use the following parameters:
+Macd histogram shall  be named MacdFall if, anywhere, after a succession of 3 rising bars, it suddenly forms one falling bar. The one falling bar shall thus be referred to as MacdFall.
+MacdFall+ is the MacdFall happening above the zero line; MacdFall- is the MacdFall happening below the zero line. 1MacdFall refers to the first MacdFall since the histogram crossed the zero line
+Please infer the rest from the following definition: 2MacdFall- is the second MacdFall since the histogram crossed below the zero line. etc.
+PriceRise is the price lowest bottom at any MacdRise
+
+Macd histogram shall  be named MacdRise if, anywhere, after a succession of 3 falling bars, it suddenly forms one Rising bar. The one Rising bar shall thus be referred to as MacdRise.
+MacdRise+ is the MacdRise happening above the zero line; MacdRise- is the MacdRise happening below the zero line. 1MacdRise refers to the first MacdRise occurring since the histogram crossed the zero line; for example 1MacdRise+ is the first MacdRise since the histogram crossed above the zero line; 1MacdRise- if occurring for the first time since it crossed below the zero line.
+Please infer the rest from the following definition: 2MacdRise- is the second MacdRise since the histogram crossed below the zero line. etc.
+PriceFall is the price highest point at any MacdFall.
+lets say 1PriceRise is the   PriceRise moving along with 1MacdRise; 1PriceFall the PriceFall matching with 1MacdFall; 2PriceFall the PriceFall matching with 2MacdFall;  etc please infer the rule:  use e as count variable that resets at the zero line crossover, and count the number of occurrences of a pattern WITHOUT CROSSING THE ZERO LINE
+Strategy 1
+BLOCK A 
+check for  Macd bullish divergences in the 30m+ timeframe; monitor all the timeframes: 30m, 1H, 4H, 1D and even 1W ; track bullish divergence; if there is a bullish divergence (case where price crosses below 1PriceRise while the macd bar is still closes above the 1MacdRise- level, where we suspect  2MacdRise- is forming higher than 1MacdRise-.
+when this occurs, we shall move to BLOCK B below
+BLOCK B
+switch to the lower timeframe, this time ignoring the Block A conditions and instructions, 5m , 10m or 15m. if the histogram is above zero at one of these, we shall wait until it makes the first  new MacdRise- and then we take the buy order. The buy order shall go  on until a 1MacdFall+ forms for the first time.
+Strategy 2
+BLOCK C
+check for  Macd bearish divergences in the 30m+ timeframe; monitor all the timeframes: 30m, 1H, 4H, 1D and even 1W ; track bearish divergence; if there is a bearish divergence (case where price crosses above 1PriceFall while the macd bar is still closes below the 1MacdFall+ level, where we suspect  2MacdFall+ is forming higher than 1MacdFall+.
+when this occurs, we shall move to BLOCK D below
+BLOCK D
+switch to the lower  (5m , 10m or 15m)  timeframe, this time ignoring the Block C conditions and instructions. if the histogram is below  zero at one of these, we shall wait until it crosses over and makes the first  new MacdFall and then we take the sell order. The sell order shall go  on until a 1MacdRise- forms for the first time.
+please generate this expert advisor making sure to add the other parameters i may have overlooked. Remember, among other things i need mql5 validation so make sure to include no non-latin or unnecessary characters in the code.
