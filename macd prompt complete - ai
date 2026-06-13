@@ -1,0 +1,36 @@
+Act as an expert MQL5 algorithmic developer. Develop a full, production-ready, and error-free Expert Advisor (EA) for MetaTrader 5 based on the exact structural MACD rules and specifications detailed below. 
+
+### 1. Custom MACD Definitions & Count State (Variable 'e')
+Implement a tracking variable 'e' for pattern occurrences. Variable 'e' MUST reset to 0 every time the MACD histogram main line crosses the zero line. Track patterns sequentially ONLY while the histogram remains on the same side of the zero line.
+
+* MacdFall: Formed when a single falling MACD histogram bar immediately follows a succession of at least 3 consecutive rising bars.
+    * MacdFall+: A MacdFall occurring above the zero line.
+    * MacdFall-: A MacdFall occurring below the zero line.
+    * 1MacdFall: The very first occurrence (e = 1) of a MacdFall since the histogram crossed the zero line. 
+    * 2MacdFall: The second occurrence (e = 2) since crossing, and so on.
+    * PriceFall: The highest price point reached during the specific bar matching any given MacdFall (e.g., 1PriceFall matches 1MacdFall, 2PriceFall matches 2MacdFall).
+
+* MacdRise: Formed when a single rising MACD histogram bar immediately follows a succession of at least 3 consecutive falling bars.
+    * MacdRise+: A MacdRise occurring above the zero line.
+    * MacdRise-: A MacdRise occurring below the zero line.
+    * 1MacdRise: The very first occurrence (e = 1) of a MacdRise since the histogram crossed the zero line (e.g., 1MacdRise+ or 1MacdRise-).
+    * 2MacdRise: The second occurrence (e = 2) since crossing, and so on.
+    * PriceRise: The lowest price bottom reached during the specific bar matching any given MacdRise (e.g., 1PriceRise matches 1MacdRise).
+
+### 2. Strategy 1 (Bullish Divergence Strategy)
+* Magic Number: 888111
+* Block A (Higher Timeframes): Continuously monitor the 30M, 1H, 4H, 1D, and 1W timeframes for a Bullish Divergence. A Bullish Divergence is defined as the exact condition where current market price crosses BELOW '1PriceRise', while the current closing MACD histogram bar remains strictly ABOVE the '1MacdRise-' level (suspecting that a higher 2MacdRise- is forming). When this condition is met on any of these timeframes, immediately proceed to Block B.
+* Block B (Lower Timeframes Execution): Switch focus to the 5M, 10M, or 15M timeframes, completely ignoring Block A conditions. If the histogram on one of these timeframes is currently above zero, wait until it drops below zero and forms its very first new 'MacdRise-' pattern. Execute a BUY order immediately upon formation.
+* Exit Condition: Hold the buy order open until a '1MacdFall+' pattern forms for the first time on the execution timeframe.
+
+### 3. Strategy 2 (Bearish Divergence Strategy)
+* Magic Number: 888222
+* Block C (Higher Timeframes): Continuously monitor the 30M, 1H, 4H, 1D, and 1W timeframes for a Bearish Divergence. A Bearish Divergence is defined as the exact condition where current market price crosses ABOVE '1PriceFall', while the current closing MACD histogram bar remains strictly BELOW the '1MacdFall+' level (suspecting that a lower 2MacdFall+ is forming). When this condition is met on any of these timeframes, immediately proceed to D.
+* Block D (Lower Timeframes Execution): Switch focus to the 5M, 10M, or 15M timeframes, completely ignoring Block C conditions. If the histogram on one of these timeframes is currently below zero, wait until it crosses above zero and forms its very first new 'MacdFall' pattern. Execute a SELL order immediately upon formation.
+* Exit Condition: Hold the sell order open until a '1MacdRise-' pattern forms for the first time on the execution timeframe.
+
+### 4. Code Compliance & Validation Principles
+* No Non-Latin Characters: Strictly remove all emojis, special symbols, or non-ASCII characters from comments, Print statements, or strings.
+* Invalid Stops Mitigation: Always validate SL/TP using 'SYMBOL_TRADE_STOPS_LEVEL' plus a 3-5 point extra buffer cushion. Adjust values dynamically before order execution.
+* Invalid Volume & Volume Limits: Normalize all lot sizes cleanly using 'SYMBOL_VOLUME_MIN', 'SYMBOL_VOLUME_MAX', 'SYMBOL_VOLUME_STEP', and respect 'SYMBOL_VOLUME_LIMIT'.
+* Risk Management & Robustness: Include strong pre-trade margin validation routines ('OrderCalcMargin' and free margin safety checks), account for broker filling modes, and use conservative risk management parameters.
