@@ -1,0 +1,9 @@
+
+i need an indicator that would work as follows:
+BearMove is when the 250sma crosses above the 200sma; 
+BulMove is when the 200sma crosses above 250sma
+The space in-between the two moving averages: paint red when it is BearMove and green when it is BulMove.
+Please on any chart on which it is attached it should color only the space in-between those two moving averages every time. i insist: only those two moving averages. 
+The program shall also measure the distance in atr between the last crossover and the current one, the previous and the near, and write  those different distance at the crossover point, in yellow, after storing it temporarily in array.. I insist: write the distance from each previous crossover to the current one at the crossing point of the current crossover.
+Please generate the indicator. making sure it is light enough and will instantly automatically  color the indicated space and print the number at the right place.
+ color all the 200sma-250sma downmoves 
