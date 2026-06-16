@@ -1,0 +1,24 @@
+define the contexts in which a long bearish candle followed by a doji closing above previous close followed by
+ another bullish close higher prophetizes a bullish trend
+
+The top 5 bearish contexts: 
+A. BearishMode: True
+Context start: 8ema<20sma<50sma<100sma
+Context end:  one moving average crossing above the 100sma
+Strategy 0: FirstBearsBelowMA: While BearishMode is on, if we see any bullish candle, or a set of two or more consecutive bullish candles
+ending with a doji near a moving average then
+If it is followed by two consecutive short-body consecutive bearish candles then take a short trade, after checking the nearness to moving 
+average. Repeat this as many times as this happens while BearishMode is on
+Strategy 1.. PerfectBear:  8ema<20sma<50sma<100sma pattern: 
+While BearishMode is true,
+if the 20sma or 50sma trends down over a certain
+ If the price is further from the topmost moving average by a defined minimum threshold then
+If price have been trending down by at least 3 consecutive bearish candles, or more with a margin error 
+of one bullish exeption candles, then if it forms a doji closed above the last bearish candle, followed by one candle closing above the bullish candle
+then take a buy order with stop loss below the low of the last bearish canlde
+Strategy 3. etirement if PerfectBear is on, then if the distance between the downmost moving average and the topmost moving average is greater than certain atr threshold
+then if price goes below the 8ema by a certain atr threshold, then take a buy.
+Strategy 2. FirstBearAboveMA:
+After  PerfectBear is ended, if price climbes above the topmost moving average for the first time, if it makes a doji 
+followed by two short-bodied consecutive bearish candles, take a sell trade and keep it on until the first close above the 8ema
+
