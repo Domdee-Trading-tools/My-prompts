@@ -1,0 +1,15 @@
+BearMove is the chart condition where the market is made up of falling candles (if the market either alligns a streak of five or more falling candles (with a tolerance of one rising candle once in a while), covering a distance of 1.5 atr or more(user customizable); if one single falling candle can cover that distance too we can also name it BearMove; if any two falling candles can also cover that distance, it would also be in  BearMove condition.
+BodyAvg- is the body average of all the candles in the streak; 
+DualRise is a sudden two consecutive rising candles whose bodies are shorter than BodyAvg-
+FirstMgment include the following; stop loss should be 0.5 atr below DualRise, and take profit should be at least 50% of the size of the BearMove; the lot size shall be 0.01
+If it hits the stop loss first time, then we shall wait for DualRise1 
+DualRise1  is the case of DualRise coming after the first dualrise has hit the stop loss;
+it may also out of tolerance encompass the next buy signal occuring below DualRise or around that price level.
+Trade management that applies is SecondMgmt, which includes stop loss 0.5 atr below the DualRise1, take profit to cover up to 50% of the BearMove size, and lot size should be .02
+
+DualRise2   is the condition when the stop loss for DualRise and DualRise1 were hit. when it happened, the next DualRise happening below DualRise1 is DualRise2 and it should be extended to a buy signal. when it happens we should take a buy 
+here the trade position managemn is ThirdMgmt with consists of stop loss 0.5 atr below DualRise2, take profit at 50% of the size of the BearMove size this far, and lot size is 0.05
+as far as possible, make these parameters customizable
+
+
+generate the mt5 expert advisor making sure it is robust enough, and production ready and professional, and can pass the mql5 validation
