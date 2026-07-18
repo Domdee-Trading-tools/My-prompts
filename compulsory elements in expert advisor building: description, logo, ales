@@ -1,0 +1,37 @@
+Product description
+
+
+
+I need a product description for the following expert advisor. 
+The description shall be done as follows: 
+What the description shall stick to: 
+The product description shall be clear and simple enough for the newbie user to quickly understand it; however it shall also include 
+enough technicals for someone who has learnt trading to also quickly understand it without  betraying the strategies in use in it.
+It shall not also include non-latin characters
+As far as possible avoid variable names which are typically understood by the developper alone.
+the description shall be as convincing, engaging as possible.
+the description shall be well-structured, if possible have titles in its sections.
+the titles shall include: a. the best instruments that it was optimized to work on;
+b. the best timeframe to use it on;  c. the broker link; 
+d. how to attach it to mt5 
+e. how to attach it to chart.
+f. The language should be as simple as can be quickly understood by the user accross all mql5 languages
+1. infer the technical analysis in use in the code and build up the description around it;
+2. Avoid using non-latin characters in the description; 
+3. Avoid using variable names that may not be understood by the end-user; 
+4. While using very simple and explicit language, be as convincing and as engaging as possible.
+5. sTRUCTURE IT VERY WELL. IF POSSIBLE WRITE A TITLE TO EACH PARAGRAPH
+5. The final text shall be a piece of literature that would not lose its significance when translated into other languages
+6. we should have the goal for which the expert advisor had been created
+7. domdee brand is a series of trading tools to make your trading journey profitable
+
+
+
+Directives for logo drawing.
+
+Please i need an expert advisor that would work with the alligator. it should trigger a sell each time the allignment is Blue>red>green
+trigger a buy if the allignment is blue line<red<green. The filter should be buy immediately if 
+the most recent major impulse move is bearish, and price spikes below the 4sma by a defined threshold (please define it)
+ and sell  
+if it is bullish, and the price spike above the 4ema by the same threshold (the threshold should be atr-based). a major impulse move should be taken 
+as a move of at least 2 atr.
