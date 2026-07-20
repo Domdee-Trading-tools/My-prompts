@@ -1,0 +1,16 @@
+‎In the expert advisor I want you to Create,
+‎Each strategy shall have a separate magic number; LTF shall indicate either of the 1m or 5m timeframe. HTF shall indicate any of the following: 2h, 4h, 1d, 1w time-frames.
+‎The thresholds shall be user-customizable.
+‎The expert advisor should have a message box at each strategy trigger and they should be able to send messages to mobile.
+‎ Bulzie shall be the pattern where the 8ema>20sma>50sma. Bulzie+ shall indicate Bulzie pattern where the 200sma is below them all; Bulzie++ if  all of these have 250sma below them; Bearie is the case where 8ema<20sma<50sma. Bearie- is Bearie pattern where the 100sma is above them all; and Bearie-- if in the case of Bearie-, we have the 250sma above them all. BulzieCandl is the very first candle where Bulzie occurs and BearieCandl is the very first candle after Bearie first occurs.
+‎To be valid in this expert advisor, the latest average to major impulse move preceding it should have been bearish, and it should be  at least 1.5 ATR;  while for Bearie, the latest average to major impulse move should have been bullish and at least at least 1.5 ATR  from its start to its finish.
+‎
+‎
+‎Strategy 1.
+‎a. If the spread between the topmost moving average and the bottommost moving average is smaller than 0.3 ATR then take a buy at the BulzieCandl close;  stop loss should be 0.5 ATR below the low of the latest 3 candles lowest low; take profit should be when there is close below the 8ema. Issue a message saying "Moving averages strategy indicates a BUY SIGNAL AT [HTF/LTF] ON [instrument]"
+‎b. If the latest move is greater than 2.5 ATR then take a buy at the first BulzieCandl, take another buy if the while the trend is moving up, we have 8ema cross above 20sma. The stop loss should be 0.5 ATR below the moving average and take profit should be at the next close below the 8ema.
+‎
+‎
+‎Strategy 2.
+‎a. The program scans the chart at the HTF, any of the time-frames. If BulzieCandl is detected then switch to LTF - we may use state machine -  and track the case where we we have Bearie-. If we have Bearie- at the lower time frame then if price moves below the 8ema by at least 0.5 ATR then the message box shall be issued "BUY immediately at 0.01 lot size"; execute a buy order with 0.01 lot size; stop loss should be 0.5 ATR below the low of the lowest candle of the last 3 candles. Take profit should be at the next
+‎b. If we have Bearie-- at the LTF then if price spikes below the 8ema by 0.5 ATR then we should trigger a Buy order at 0.02 lot size with the stop loss 0.5 ATR below the lowest candle of the latest 3 candles. Issue a message saying "buy immediately at [instrument] with signal from [time-frames {HTF}\{LTF}] buy at 0.02 lot size" .
