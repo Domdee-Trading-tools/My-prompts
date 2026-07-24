@@ -31,6 +31,19 @@ Directives for logo drawing.
 
 Please i need an expert advisor that would work with the alligator. it should trigger a sell each time the allignment is Blue>red>green
 trigger a buy if the allignment is blue line<red<green. The filter should be buy immediately if 
+
+
+logo environment:
+
+No non-Latin characters: Remove all emojis, special symbols, or non-ASCII from Print(), comments, and strings.
+Invalid Stops: Always validate SL/TP using SYMBOL_TRADE_STOPS_LEVEL + buffer (minimum 3-5 points extra). Adjust dynamically and never place orders if distance is insufficient.
+Invalid Volume / Volume Limit Reached: Normalize lots using SYMBOL_VOLUME_MIN, SYMBOL_VOLUME_MAX, SYMBOL_VOLUME_STEP, and SYMBOL_VOLUME_LIMIT. Respect netting mode limits.
+Stop-Outs / Excessive Drawdown: Use conservative risk (max 0.5-1% per trade, strong margin checks, reduce lots on XAUUSD/Gold). Avoid large fixed lots.
+General Robustness: Include pre-trade validation (OrderCalcMargin, spread check, free margin safety), proper filling modes, and new-bar detection.
+
+Generate full, clean, production-ready code that passes MQL5 Market and Strategy Tester validation.
+
+You can attach this block at the beginning of any new prompt. It keeps the developer focused on the common rejection reasons without being too long.
 the most recent major impulse move is bearish, and price spikes below the 4sma by a defined threshold (please define it)
  and sell  
 if it is bullish, and the price spike above the 4ema by the same threshold (the threshold should be atr-based). a major impulse move should be taken 
