@@ -1,0 +1,149 @@
+In the expert advisor I want  to Create,
+
+‎Each strategy shall have a separate magic number;
+
+‎LTF shall indicate either of the 1m or 5m timeframe.
+
+‎HTF shall indicate any of the following: 1H 2h, 4h, 1d, 1w time-frames.
+
+‎The thresholds used in this expert advisor shall be user-customizable.
+
+‎The expert advisor should send message to mobile and print it to the screen at every trade.
+
+‎
+
+‎Bulzie shall be the pattern where the 8ema>20sma>50sma. The first candle where it occurred is BulzieCandl
+
+‎Bulzie shall be valid if and only if it is adjacent to a previous bearish move that the price has been falling by at least 1 ATR.
+
+‎
+
+‎Bulzie+ shall indicate Bulzie pattern where the 250sma enters below them all for the first time after the BulzieCandl; the first candle where Bulzie+  occurred is BulzieCandl+
+
+‎
+
+‎Bulzie++ is the chart condition to which 500sma comes and adds below Bulzie+, after BulzieCandl+;
+
+‎the first candle where it occurred is BulzieCandl++
+
+‎
+
+‎Bearie is the case where 8ema<20sma<50sma.
+
+‎
+
+‎Bearie- is Bearie pattern where the 100sma is above them all; and
+
+‎
+
+‎Bearie-- if in the case of Bearie-, we have the 250sma above them all.
+
+‎
+
+‎BulzieCandl is the very first candle where Bulzie occurs and
+
+‎
+
+‎BearieCandl is the very first candle after Bearie first occurs.
+
+‎
+
+‎Any Bulzie shall be valid if and only if the move it is reversing from ,  has been falling over a distance of at least 2.5 Atr
+
+‎
+
+‎Any Bearie shall only be valid if the move it is reversing from, has been rising over at least  2.5 ATR distance
+
+‎
+
+‎
+
+‎
+
+‎At this point the expert advisor shall have 4 scanning engines:
+
+‎- Engine 1 shall scan this higher timeframes and feeds BulzieTank ,
+
+‎- Engine 2 should cans the charts to feed Bearietank,
+
+‎- Engine 3 shall  scan LTF  BulzieTank items on the chart, once it  contains items  in it, to feed BulReady, BulReady+ and BulReady++ relevantly
+
+‎- Engine 4 will scan the 5m (default) timeframe and acts independently to trigger orders on independent charts
+
+‎RetracementCount is the number of candles in the retracement
+
+‎
+
+‎Pre-strategy:
+
+‎On the 5m timeframe
+
+‎If at the moment that 8ema crosses above 20sma,  the 50sma is at least 1 ATR (default) above the crossover point then take a buy with 1.5 ATR stop loss and 3 ATR take profit
+
+‎
+
+‎Strategy 0: single timeframe strategy on 5m (default); if the moment the 8ema crosses above the 20sma, the 50sma is below them, and the distance between the crossover point and the 50sma is less than 0.2 ATR (default)  then,
+
+‎if the adjacent move was predominantly bearish (with at least 0.8 ATR falling) then take a buy trade.
+
+‎
+
+‎MacdRise is the condition of the macd histogram where after at least 4 consecutive falling bars we suddenly have one bar close higher than the previous one
+
+‎MacdRise- is MacdRise happening below 0 and MacdRise+  is MacdRise happening above 0
+
+‎
+
+‎ReversalSigns
+
+‎If in a valid downmove we have a retracement with more than 3 counter-trend candles ie rising candles as the retracement of the downmove,
+
+‎This is called ReversalSigns
+
+‎ if price below ReversalSigns spike below the downmost moving average  then if macd histogram is below the 0 bar
+
+‎then if the new histogram bar forms MacdRise- then we should take a buy trade with 1 ATR stop loss, and keep the trade on for as long as we have rising histogram.
+
+‎(If histogram bar closes lower than the previous one then take profit immediately)
+
+‎
+
+‎If the price hits the stop loss here we should still take a buy trade if we have a new MacdRise- while price is below the previous stop loss level,  and trade it in the same conditions. If the stop loss still hits here we'll take a buy trade at the new MacdRise under the same conditions but this time take 0.03 lot size to catch up for the first losses
+
+‎
+
+‎Strategy 1. Single-timeframe strategies  (use engine 4 to scan the 5m timeframe (default) for all the above-described  patterns, and trigger orders as indicated below):
+
+‎The Buy area ranges From BulzieCandl up to where the 20sma crosses below the 100sma, execute Buy at BulzieCandl itself, (preferably wait for the first bearish candle after the pattern to buy at the best conditions); exit when the price closed below the 8ema;
+
+‎resume the buy trade any time we get a buy signal above the 500sma while it is still the downmost moving average, or if we get the 8ema crosses above the 20sma or any other moving average); close the trade when a candle close below the 8ema; resume a buy trade if the 8ema crosses above the 20sma, close it at the first close below the 8ema; take another Buy at BulzieCandl+, close it when the price closed below the 8ema; if BulzieCandl++ occurs take another buy; close it when price closed below the 8ema . The stop loss for all these should be 1.5 ATR.
+
+‎
+
+‎Strategy 2  HTF strategies
+
+‎
+
+‎Activate the engine that scans HTF and look for cases where 250sma and 500sma are the downmost moving averages, with the 500sma being the downer one. If the price is above any of these then
+
+‎If the previous candle is a bearish marubozu of more than 70% body, or if it is a bearish move retracement then
+
+‎ if the current candle hits its own high, or follows a buy signal
+
+‎then take a buy trade with 0.5 ATR stop loss and close the trade in case of profit at 60% of the candle range, or move covered.
+
+‎
+
+‎Strategy 3 Higher timeframe strategy (continued)
+
+‎
+
+‎We shall come back to HTF and scan for BulzieCandl, BulzieCandl+, BulzieCandl++, when it is found, we rush to the LTF and catch the moment Bearie pattern is formed: if Bearie pattern is formed then
+
+‎If the price spike below the downmost moving average by at least 0.5 ATR then take a buy trade. 0.01 lot size and 1 ATR stop loss. Take profit should be 2.5 ATR.
+
+‎If Bearie- then at the next spike below the downmost moving average we should take a buy trade this time with 0.02 lot size. Take profit should be 4 ATR
+
+‎If  Bearie-- we shall still take a buy trade at the next spike below the downmost moving average, and this time set the lot size to 0.03 to compensate for the previous losses
+
+‎Take profit should be 4 ATR.
