@@ -1,0 +1,429 @@
+//+------------------------------------------------------------------+
+//|                  TrendImpulse_TurningPoints.mq5                   |
+//|     Bull HL→LL (Sell) | Bear LL→HL (Buy) with min trend size      |
+//+------------------------------------------------------------------+
+#property copyright   "Maurice Takou"
+#property link        "https://www.mql5.com"
+#property version     "2.10"
+#property description "TrendImpulse Turning Points – HL→LL Sell | LL→HL Buy"
+#property indicator_chart_window
+#property indicator_buffers 0
+#property indicator_plots   0
+
+//--- inputs
+input group "=== General ==="
+input int    InpATRPeriod            = 14;
+input double InpMinTrendATR          = 2.5;    // Minimum Bull/Bear trend size (ATR)
+input double InpMinLegATR            = 0.6;    // Minimum leg size to count
+input int    InpPivotLeft            = 3;
+input int    InpPivotRight           = 3;
+input int    InpHistoryBars          = 700;
+
+input group "=== Visual ==="
+input color  InpBullLineColor        = clrCrimson;     // Line at high (Sell setup)
+input color  InpBearLineColor        = clrDodgerBlue;  // Line at low  (Buy setup)
+input color  InpSellArrowColor       = clrRed;
+input color  InpBuyArrowColor        = clrLime;
+input int    InpLineWidth            = 2;
+input int    InpLineBars             = 6;
+input int    InpArrowCodeSell        = 234;
+input int    InpArrowCodeBuy         = 233;
+input double InpArrowOffsetPts       = 12;
+
+input group "=== Filters ==="
+input double InpReturnTolATR         = 0.40;   // Tolerance for arrow placement
+input int    InpMaxObjects           = 50;
+
+input group "=== Alerts ==="
+input bool   InpEnableAlerts         = true;
+input bool   InpPushNotifications    = false;
+
+//---
+string Prefix = "TTP_";
+int hATR = INVALID_HANDLE;
+
+//+------------------------------------------------------------------+
+int OnInit()
+{
+   hATR = iATR(_Symbol, PERIOD_CURRENT, InpATRPeriod);
+   if(hATR == INVALID_HANDLE)
+   {
+      Print("ATR handle creation failed");
+      return INIT_FAILED;
+   }
+   IndicatorSetString(INDICATOR_SHORTNAME, "TrendImpulse Turning Points");
+   return INIT_SUCCEEDED;
+}
+
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+   if(hATR != INVALID_HANDLE) IndicatorRelease(hATR);
+   ObjectsDeleteAll(0, Prefix);
+   Comment("");
+}
+
+//+------------------------------------------------------------------+
+void SendAlert(const string text)
+{
+   if(!InpEnableAlerts) return;
+   string msg = "[" + _Symbol + "] " + text;
+   Print(msg);
+   if(InpPushNotifications && !MQLInfoInteger(MQL_TESTER))
+      SendNotification(StringSubstr(msg, 0, 250));
+}
+
+//+------------------------------------------------------------------+
+bool IsPivotHigh(const int i, const double &high[], const int total)
+{
+   if(i < InpPivotRight || i + InpPivotLeft >= total) return false;
+   for(int k=1; k<=InpPivotLeft; k++)  if(high[i] <= high[i+k]) return false;
+   for(int k=1; k<=InpPivotRight; k++) if(high[i] <= high[i-k]) return false;
+   return true;
+}
+
+//+------------------------------------------------------------------+
+bool IsPivotLow(const int i, const double &low[], const int total)
+{
+   if(i < InpPivotRight || i + InpPivotLeft >= total) return false;
+   for(int k=1; k<=InpPivotLeft; k++)  if(low[i] >= low[i+k]) return false;
+   for(int k=1; k<=InpPivotRight; k++) if(low[i] >= low[i-k]) return false;
+   return true;
+}
+
+//+------------------------------------------------------------------+
+void DrawSmallLine(datetime t, double price, color clr, string name)
+{
+   int sec = PeriodSeconds();
+   datetime t1 = t - InpLineBars * sec / 2;
+   datetime t2 = t + InpLineBars * sec / 2;
+
+   if(ObjectFind(0, name) >= 0) ObjectDelete(0, name);
+   ObjectCreate(0, name, OBJ_TREND, 0, t1, price, t2, price);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH, InpLineWidth);
+   ObjectSetInteger(0, name, OBJPROP_STYLE, STYLE_SOLID);
+   ObjectSetInteger(0, name, OBJPROP_RAY_RIGHT, false);
+   ObjectSetInteger(0, name, OBJPROP_RAY_LEFT, false);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+   ObjectSetInteger(0, name, OBJPROP_BACK, false);
+}
+
+//+------------------------------------------------------------------+
+void DrawArrow(datetime t, double price, color clr, int code, string name)
+{
+   if(ObjectFind(0, name) >= 0) ObjectDelete(0, name);
+   ObjectCreate(0, name, OBJ_ARROW, 0, t, price);
+   ObjectSetInteger(0, name, OBJPROP_ARROWCODE, code);
+   ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
+   ObjectSetInteger(0, name, OBJPROP_WIDTH, 2);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(0, name, OBJPROP_HIDDEN, true);
+}
+
+//+------------------------------------------------------------------+
+void CleanupObjects()
+{
+   int total = ObjectsTotal(0);
+   int cnt = 0;
+   string names[];
+   for(int i=total-1; i>=0; i--)
+   {
+      string n = ObjectName(0, i);
+      if(StringFind(n, Prefix) == 0)
+      {
+         cnt++;
+         ArrayResize(names, cnt);
+         names[cnt-1] = n;
+      }
+   }
+   if(cnt > InpMaxObjects)
+      for(int i=InpMaxObjects; i<cnt; i++) ObjectDelete(0, names[i]);
+}
+
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+{
+   if(rates_total < 150) return 0;
+
+   ArraySetAsSeries(time, true);
+   ArraySetAsSeries(high, true);
+   ArraySetAsSeries(low,  true);
+   ArraySetAsSeries(close,true);
+
+   double atr[];
+   ArraySetAsSeries(atr, true);
+   if(CopyBuffer(hATR, 0, 0, rates_total, atr) < rates_total) return 0;
+
+   static datetime lastBar = 0;
+   if(time[0] == lastBar && prev_calculated > 0) return rates_total;
+   lastBar = time[0];
+
+   ObjectsDeleteAll(0, Prefix);
+
+   int limit = MathMin(InpHistoryBars, rates_total - InpPivotLeft - InpPivotRight - 20);
+   if(limit < 80) return rates_total;
+
+   // Collect pivots (index 0 = newest)
+   datetime pTime[];
+   double   pPrice[];
+   int      pIndex[];
+   bool     pIsHigh[];
+
+   ArrayResize(pTime,0); ArrayResize(pPrice,0);
+   ArrayResize(pIndex,0); ArrayResize(pIsHigh,0);
+
+   for(int i=InpPivotRight; i<limit; i++)
+   {
+      if(IsPivotHigh(i, high, rates_total))
+      {
+         int s=ArraySize(pTime);
+         ArrayResize(pTime,s+1); ArrayResize(pPrice,s+1);
+         ArrayResize(pIndex,s+1); ArrayResize(pIsHigh,s+1);
+         pTime[s]=time[i]; pPrice[s]=high[i]; pIndex[s]=i; pIsHigh[s]=true;
+      }
+      if(IsPivotLow(i, low, rates_total))
+      {
+         int s=ArraySize(pTime);
+         ArrayResize(pTime,s+1); ArrayResize(pPrice,s+1);
+         ArrayResize(pIndex,s+1); ArrayResize(pIsHigh,s+1);
+         pTime[s]=time[i]; pPrice[s]=low[i]; pIndex[s]=i; pIsHigh[s]=false;
+      }
+   }
+
+   int n = ArraySize(pTime);
+   if(n < 10) return rates_total;
+
+   //==============================================================
+   // State machines
+   //==============================================================
+   // BullTrend tracking
+   double bullStartPrice = 0;
+   double lastHL = 0;
+   int    hlCount = 0;
+   bool   inBull = false;
+   double bullTrendSizeATR = 0;
+
+   // BearTrend tracking
+   double bearStartPrice = 0;
+   double lastLH = 0;
+   int    lhCount = 0;
+   bool   inBear = false;
+   double bearTrendSizeATR = 0;
+
+   // Temporary storage for signals that need a later arrow
+   struct PendingSignal
+   {
+      bool     active;
+      bool     isSell;          // true = Sell (Bull side), false = Buy (Bear side)
+      double   linePrice;
+      datetime lineTime;
+      int      linePivotIdx;
+   };
+   PendingSignal pending[];
+   ArrayResize(pending, 0);
+
+   // Walk from older pivots to newer
+   for(int i = n-2; i >= 1; i--)
+   {
+      bool currHigh = pIsHigh[i];
+      bool prevHigh = pIsHigh[i+1];
+      if(currHigh == prevHigh) continue;
+
+      double legSize = MathAbs(pPrice[i] - pPrice[i+1]);
+      int mid = (pIndex[i] + pIndex[i+1]) / 2;
+      double legATR = (mid>=0 && mid<rates_total && atr[mid]>0) ? legSize/atr[mid] : 0;
+      if(legATR < InpMinLegATR) continue;
+
+      //---------------- BULL SIDE (up trend) ----------------
+      // TrendImpulse = up leg (High after Low)
+      // RetraceImpulse = down leg (Low after High)
+      if(currHigh && !prevHigh) // up leg
+      {
+         if(!inBull)
+         {
+            inBull = true;
+            bullStartPrice = pPrice[i+1]; // start from the low
+            lastHL = 0;
+            hlCount = 0;
+         }
+         // Update trend size
+         if(atr[pIndex[i]] > 0)
+            bullTrendSizeATR = (pPrice[i] - bullStartPrice) / atr[pIndex[i]];
+      }
+      else if(!currHigh && prevHigh) // down leg = Retrace in Bull
+      {
+         if(inBull)
+         {
+            if(lastHL == 0)
+            {
+               lastHL = pPrice[i];
+               hlCount = 1;
+            }
+            else if(pPrice[i] > lastHL)
+            {
+               // Higher Low – normal
+               lastHL = pPrice[i];
+               hlCount++;
+            }
+            else if(pPrice[i] < lastHL && hlCount >= 1 && bullTrendSizeATR >= InpMinTrendATR)
+            {
+               // ===== HL → LL shift =====
+               // Draw line at the HIGH of this RetraceImpulseMove (previous pivot = high)
+               double linePrice = pPrice[i+1];
+               datetime lineTime = pTime[i+1];
+
+               string name = Prefix + "BullLine_" + IntegerToString(pIndex[i+1]);
+               DrawSmallLine(lineTime, linePrice, InpBullLineColor, name);
+               SendAlert("BullTrend HL→LL – Red line at high");
+
+               // Store for later Sell arrow
+               int s = ArraySize(pending);
+               ArrayResize(pending, s+1);
+               pending[s].active = true;
+               pending[s].isSell = true;
+               pending[s].linePrice = linePrice;
+               pending[s].lineTime = lineTime;
+               pending[s].linePivotIdx = i+1;
+
+               // Reset
+               inBull = false;
+               lastHL = 0;
+               hlCount = 0;
+               bullTrendSizeATR = 0;
+            }
+            else
+            {
+               lastHL = pPrice[i];
+               hlCount = 1;
+            }
+         }
+      }
+
+      //---------------- BEAR SIDE (down trend) ----------------
+      // TrendImpulse = down leg (Low after High)
+      // RetraceImpulse = up leg (High after Low)
+      if(!currHigh && prevHigh) // down leg
+      {
+         if(!inBear)
+         {
+            inBear = true;
+            bearStartPrice = pPrice[i+1]; // start from the high
+            lastLH = 0;
+            lhCount = 0;
+         }
+         if(atr[pIndex[i]] > 0)
+            bearTrendSizeATR = (bearStartPrice - pPrice[i]) / atr[pIndex[i]];
+      }
+      else if(currHigh && !prevHigh) // up leg = Retrace in Bear
+      {
+         if(inBear)
+         {
+            if(lastLH == 0)
+            {
+               lastLH = pPrice[i];
+               lhCount = 1;
+            }
+            else if(pPrice[i] < lastLH)
+            {
+               // Lower High – normal
+               lastLH = pPrice[i];
+               lhCount++;
+            }
+            else if(pPrice[i] > lastLH && lhCount >= 1 && bearTrendSizeATR >= InpMinTrendATR)
+            {
+               // ===== LL → HL shift =====
+               // Draw line at the LOW of this RetraceImpulseMove (previous pivot = low)
+               double linePrice = pPrice[i+1];
+               datetime lineTime = pTime[i+1];
+
+               string name = Prefix + "BearLine_" + IntegerToString(pIndex[i+1]);
+               DrawSmallLine(lineTime, linePrice, InpBearLineColor, name);
+               SendAlert("BearTrend LL→HL – Blue line at low");
+
+               // Store for later Buy arrow
+               int s = ArraySize(pending);
+               ArrayResize(pending, s+1);
+               pending[s].active = true;
+               pending[s].isSell = false;
+               pending[s].linePrice = linePrice;
+               pending[s].lineTime = lineTime;
+               pending[s].linePivotIdx = i+1;
+
+               inBear = false;
+               lastLH = 0;
+               lhCount = 0;
+               bearTrendSizeATR = 0;
+            }
+            else
+            {
+               lastLH = pPrice[i];
+               lhCount = 1;
+            }
+         }
+      }
+   }
+
+   //==============================================================
+   // Place arrows after the lines
+   //==============================================================
+   for(int p=0; p<ArraySize(pending); p++)
+   {
+      if(!pending[p].active) continue;
+
+      for(int i=0; i<n; i++)
+      {
+         if(pTime[i] <= pending[p].lineTime) continue;
+
+         double tol = atr[pIndex[i]] * InpReturnTolATR;
+
+         if(pending[p].isSell && pIsHigh[i])
+         {
+            // Sell arrow on a high near the line price or higher
+            if(pPrice[i] >= pending[p].linePrice - tol)
+            {
+               string an = Prefix + "Sell_" + IntegerToString(pIndex[i]);
+               DrawArrow(pTime[i], pPrice[i] + InpArrowOffsetPts*_Point,
+                         InpSellArrowColor, InpArrowCodeSell, an);
+               SendAlert("Sell arrow placed");
+               break;
+            }
+         }
+         else if(!pending[p].isSell && !pIsHigh[i])
+         {
+            // Buy arrow on a low near the line price or lower
+            if(pPrice[i] <= pending[p].linePrice + tol)
+            {
+               string an = Prefix + "Buy_" + IntegerToString(pIndex[i]);
+               DrawArrow(pTime[i], pPrice[i] - InpArrowOffsetPts*_Point,
+                         InpBuyArrowColor, InpArrowCodeBuy, an);
+               SendAlert("Buy arrow placed");
+               break;
+            }
+         }
+      }
+   }
+
+   CleanupObjects();
+   ChartRedraw(0);
+
+   Comment("TrendImpulse Turning Points\nRed line + Sell arrow = Bull HL→LL\nBlue line + Buy arrow = Bear LL→HL");
+
+   return rates_total;
+}
+//+------------------------------------------------------------------+
+I need this indicator modified as follows: the program should calculate the TrendImpulseMove's average for each chart it is attached on, and adjust the threshold to it. Let us say you take the 3 bullish TrendImpulseMoves ' average and use it as threshold and take the minimum as threshold.
+Add a logic whereby if a buy fails and prices go below the first buy level, then a the first doji that forms below it, we should buy with the arrow having the golden color.
+the same applies to sell: if a sell fails and price continue to go up, the program shall wait for the doji above the first buy level, then draw the arrow in golden color.
+if in a chart a RetraceImpulseMove is more than 5 candles then if it is in an upmove, we should wait for a doji above it to form, and make a red arrow; If it is in a downmove we should wait for a doji to form below that price level and make a green arrow.
+modify this code for a robust indicator
