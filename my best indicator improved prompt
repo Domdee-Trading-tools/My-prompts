@@ -1,0 +1,29 @@
+Indicator prompt: act as a senior experienced mql5 developper and generate an mt5 indicator based on this:
+TrendImpulseMove  is an impulse move made up of  one candle, or a succession of candles mixed or unmixed, overall moving towards the same direction, until it experiences a RetraceImpulawMove. TrendImpulseMove move atr distance from lowest low to highest high,  is longer  than RetraceImpulseMove (as defined below) if measured.
+RetraceImpulseMove is an impulse move made up of one candle,  
+ or a succession of candles moving in the direction whose overall is against the the direction of TrendImpulseMove, until  it reverses back into the TrendImpulseMove direction, and whose Low to high measurement shows   shorter  ATR distance  from its highest high to its lowest low,  than the TrendImpulseMove
+A TrendImpulseMove is pure if it is made up exclusively of the same color candles
+A retraceImpulseMove is pure if it is made up exclusively of the same color candles.
+A TrendImpulseMove is complex if it is made up of temporary single to two opposite direction candles, but with too short highs and lows distance to be considered as RetraceImpulseMove, it does so while waiting for larger retracement
+A retraceImpulseMove is complex if it is made up temporary opposite direction moves, with their own small trend and counter-trend candles,  but with shorter highs and lows distance too short to count as trend
+A BullTrend is an alternation of TrendImpulseMove's and RetraceImpulseMove's, from down  to up, with distant higher highs and higher lows, on and on until RetraceImpulseMove closes with longer high to low  ATR measurement than TrendImpulsemove for the first time.
+A BearTrend a big move containing  TrendImpulseMove's and RetraceImpulseMove's, alternating each other, from up to down, with the consecutive highs distant from the next one, and also the lower lows being distant from the next one and also from the previous one.
+on and on until RetraceImpulseMove closes with longer ATR measurement than TrendImpulsemove for the first time.
+
+The indicator i want to create shall be able to identify ,BullTrend , then  TrendImpulseMove and RetraceImpulseMove  in a BullTrend; identify  BearTrend, then retraceImpulseMove  in BearTrend. It should identify their respective turning point.
+Now this is what i want the indicator to do:
+If the BullTrend has been moving up for at least 2.5 atr (customizable) then
+If the normal HH-HL (higher high  - higher low) pattern of the RetraceImpulseMoves in it starts to shift, making the on-going HL into LL (thus turning the RetraceImpulseMoves looking in atr size like a new TrendImpulseMove) then i need the indicator to first draw a small trendline at the top of that LL move, then  monitor the new Move's peak high where a sell signal has shown, that would form next to this, and print and arrow at its high, to signify sell signal.Having done this pop up a msg box on the screen as well as to mobile,  with the writings : 'Sell Signal detected in {instrument| at {timeframes} buy now. '
+if the price action fails to move down, making its HH and HL then we should still wait for the LL to form on the RetraceImpulseMove,  then take the first doji candle that a bullish impulse move would have at its top, draw the down red arrow at the top of the doji or any other indecision candle, and issue a message box to the screen and to mobile saying ' very high probability buying signal detected on {instrument} at {timeframe}: BUY NOW'
+If after a fall of at least 2.5 atr the price acrion makes a RetraceImpulseMove of at least 5 consecutive bullish candles, then if the price drops by a big marubozu candle then 
+if a bullish doji forms below it, then 
+draw a green arrow below the doji and write 'doji for buy' and send a message to mobile saying 'Buy Signal detected: doji signal on {instrument} at {timeframe}'
+Likewise,  if in BearTrend that has been moving down over at least 2.5 atr then
+ if the normal bearish pattern of RetraceImpulseMove (LH-LL) shifts LL into HL, that is, with the RetraceImpulseMove making a new HL compared to the previous RetraceImpulseMove, the indicator should first draw a small trenline (the trendline alone) at the low of the HL RetraceImpulseMove, then monitor the chart for the new move's low (when it makes a buy signal) and draw an arrow at that low. When this is done, the message box should pop up, and also go to mobile, saying 'buy signal detected on }instrument{ at }timeframe}'
+If this new move proves fake and after it the price keep falling, continueing to make LH and LL, we shall still wait for another RetraceImpulseMove closed higher than the previous RetraceImpulseMove; then we should have a message 'high probability BUY signal at {instrument} at {timeframe}
+
+If after a rise  of at least 2.5 atr the price action makes a RetraceImpulseMove of at least 5 consecutive bearish  candles, then if the price rises  by a big marubozu candle then 
+if a bearish doji forms above  the marubozu candle, then 
+draw a red  arrow that  doji and write 'doji for Sell signal' and send a message to mobile saying 'New buy  Signal detected: doji signal on {instrument} at {timeframe}'
+
+Please identify the pattern on each chart the indicator will be installed on, and mark the relevant signs at the relevant locations. generate this indicator for mt5
